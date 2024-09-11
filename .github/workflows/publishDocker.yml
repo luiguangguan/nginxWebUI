@@ -28,8 +28,9 @@ jobs:
 
       - name: 登录到镜像仓库
         env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-        run: echo "${{ secrets.ACCESS_TOKEN }}" | docker login -u ${{env.DOCKER_USERNAME}} --password-stdin
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: echo $ACCESS_TOKEN | docker login -u $DOCKER_USERNAME --password-stdin
 
       - name: 推送镜像
         env:
