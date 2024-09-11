@@ -1,4 +1,4 @@
-name: publish Docker
+name: Docker
 
 on:
   push:
@@ -18,6 +18,10 @@ jobs:
     steps:
       - name: 检出代码库
         uses: actions/checkout@v3
+
+        # 添加 Maven 或 Gradle 构建步骤 (以 Maven 为例)
+      - name: 构建 Java 项目
+        run: mvn clean package
 
       - name: 构建镜像
         run: docker build . --file Dockerfile --tag $IMAGE_NAME
