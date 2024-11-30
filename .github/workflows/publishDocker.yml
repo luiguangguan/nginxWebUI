@@ -3,7 +3,7 @@ name: Docker
 on:
   push:
     branches:
-      - main
+      - master
     tags:
       - v*
   workflow_dispatch:  # 添加手动触发的功能
@@ -34,6 +34,7 @@ jobs:
       - name: 检查并重标已存在镜像
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}  # 将 run_number 传递给脚本
         run: |
           IMAGE_ID=$DOCKER_USERNAME/$IMAGE_NAME
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
@@ -52,7 +53,8 @@ jobs:
 
           # 如果该标签的镜像存在，先给它打上运行编号减一的标签
           if [ ! -z "$EXISTING_TAG" ]; then
-            PREV_RUN_NUMBER=$((github.run_number - 1))
+            # 使用表达式计算 PREV_RUN_NUMBER
+            PREV_RUN_NUMBER=$((GITHUB_RUN_NUMBER - 1))
             echo "Tagging the existing image with run number: $PREV_RUN_NUMBER"
             docker tag $IMAGE_ID:$VERSION $IMAGE_ID:$PREV_RUN_NUMBER
             docker push $IMAGE_ID:$PREV_RUN_NUMBER
