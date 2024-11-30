@@ -3,7 +3,7 @@ name: Docker
 on:
   push:
     branches:
-      - main
+      - master
     tags:
       - v*
   workflow_dispatch:  # 添加手动触发的功能
@@ -11,7 +11,7 @@ on:
 env:
   IMAGE_NAME: nginxwebui
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}  # 从 secrets 获取 Docker 密码
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}  # 从 secrets 获取 Docker 密码或 Access Token
 
 jobs:
   build:
@@ -28,7 +28,11 @@ jobs:
         run: docker build . --file Dockerfile --tag $IMAGE_NAME
 
       - name: 登录到 Docker Hub
-        run: echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+        run: |
+          echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: 检查并重标已存在镜像
         run: |
