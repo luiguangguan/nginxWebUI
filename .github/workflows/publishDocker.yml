@@ -19,7 +19,6 @@ jobs:
       - name: 检出代码库
         uses: actions/checkout@v3
 
-        # 添加 Maven 或 Gradle 构建步骤 (以 Maven 为例)
       - name: 构建 Java 项目
         run: mvn clean package
 
@@ -32,7 +31,7 @@ jobs:
             ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: echo $ACCESS_TOKEN | docker login -u $DOCKER_USERNAME --password-stdin
 
-      - name: 推送镜像
+      - name: 检查并重标已存在镜像
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
@@ -41,12 +40,37 @@ jobs:
 
           # 从 GitHub 事件负载中获取分支名
           BRANCH_NAME=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-
+          
           # 对于 "master" 分支和标签，使用 "latest" 版本号
           VERSION=$(if [ "$BRANCH_NAME" == "master" ]; then echo "latest"; else echo $BRANCH_NAME; fi)
 
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
 
+          # Docker Hub API 检查是否已存在该标签
+          EXISTING_TAG=$(docker manifest inspect $IMAGE_ID:$VERSION || true)
+
+          # 如果该标签的镜像存在，先给它打上运行编号减一的标签
+          if [ ! -z "$EXISTING_TAG" ]; then
+            PREV_RUN_NUMBER=$((github.run_number - 1))
+            echo "Tagging the existing image with run number: $PREV_RUN_NUMBER"
+            docker tag $IMAGE_ID:$VERSION $IMAGE_ID:$PREV_RUN_NUMBER
+            docker push $IMAGE_ID:$PREV_RUN_NUMBER
+          fi
+
+      - name: 推送新的镜像
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          IMAGE_ID=$DOCKER_USERNAME/$IMAGE_NAME
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          # 获取分支名
+          BRANCH_NAME=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          
+          # 根据分支名确定版本号
+          VERSION=$(if [ "$BRANCH_NAME" == "master" ]; then echo "latest"; else echo $BRANCH_NAME; fi)
+
+          # 推送新的版本标签镜像
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
